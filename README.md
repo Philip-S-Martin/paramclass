@@ -29,6 +29,27 @@ inspectable: public class attributes become overrideable parameters, and
 expressions that reference those parameters are evaluated when an instance is
 built.
 
+## Use Cases
+
+`paramclass` is useful when a team wants model, workflow, or configuration
+definitions to remain readable as Python while still supporting overrideable
+parameters and deferred construction.
+
+Examples include:
+
+- reusable optimization model components
+- ML model or training-job configuration objects
+- declarative construction of simulation components
+- research-to-production workflows where definitions need to be lintable,
+  reviewable, and packageable
+
+## Production Background
+
+This project came out of production ML and optimization workflows where research
+code needed to become reusable platform code. The design prioritizes readable
+definitions, parameter overrides, deferred construction, and compatibility with
+existing imperative Python APIs.
+
 ## Project Timeline
 
 `paramclass` was developed during 2023-2024 and has been used in production

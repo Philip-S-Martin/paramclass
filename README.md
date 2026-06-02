@@ -1,7 +1,7 @@
 # paramclass
 
-`paramclass` is a small Python library for making imperative construction APIs
-usable from declarative, class-body designs.
+`paramclass` is a small Python library for defining overrideable, dependency-aware
+configuration objects using normal class-body syntax.
 
 Many modeling libraries are built around imperative Python calls: create an
 object, attach components, call helper functions, mutate state. That is

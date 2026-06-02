@@ -1,9 +1,11 @@
 from paramclass.common import UNDEFINED, object_dunder_methods
+from collections.abc import Hashable
 
 def resolve_values(value, parent):
     if isinstance(value, Linker):
-        if getattr(value, '_name', None) != None:
-            return getattr(parent, value._name)
+        name = value.__dict__.get('_name')
+        if name is not None:
+            return getattr(parent, name)
         else:
             return value.__execute__(parent)
     elif isinstance(value, tuple):
@@ -76,10 +78,14 @@ class Linker(metaclass=LinkerMeta):
         self._closed = False
         
     def __call__(self, *args, **kwargs):
+        if self._closed:
+            return Linker(self)(*args, **kwargs)
         self._links.append(LinkFunc(*args, **kwargs))
         return self
     
     def __getattr__(self, name):
+        if self._closed:
+            return getattr(Linker(self), name)
         if (not isinstance(self._base, Linker) 
             and len(self._links) == 0 
             and isinstance(val := getattr(self._base, name), type)):
@@ -99,7 +105,14 @@ class Linker(metaclass=LinkerMeta):
     def __execute__(self, parent):
         val = self._base
         if isinstance(val, Linker):
-            val = getattr(parent, val._name)
+            val = getattr(parent, val.__dict__['_name'])
+        for step in self._links:
+            val = step.do(val, parent)
+        return val
+
+class ValueLinker(Linker):
+    def __execute__(self, parent):
+        val = resolve_values(self._base, parent)
         for step in self._links:
             val = step.do(val, parent)
         return val
@@ -110,4 +123,6 @@ def add_linker(base, tracer):
         raise RuntimeError(f'Attempted to register tracer for {base} twice')
     __supported_linkers__[base] = tracer
 def get_linker(base):
+    if not isinstance(base, Hashable):
+        return Linker
     return __supported_linkers__.get(base, Linker)

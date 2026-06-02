@@ -1,5 +1,6 @@
 from paramclass.common import UNDEFINED, object_dunder_methods, type_dunder_methods
-from paramclass.linker import Linker, dunder_tracer_closed, get_linker
+from paramclass.linker import Linker, ValueLinker, dunder_tracer_closed, get_linker
+from types import FunctionType
 
 class Mask:
     def __init__(self, name, val):
@@ -45,6 +46,8 @@ class ObjectMask(Mask, metaclass=ObjectMaskMeta):
 
 class MaskDict(dict):
     whitelist = ('__name__', '__builtins__', '__doc__', '__package__', '__loader__', '__spec__', '__file__', '__cached__', 'classmethod', 'staticmethod', 'property')
+    preserved_value_types = (classmethod, staticmethod, property, type)
+
     def __init__(self, frame, bases=None):
         super().__init__()
         self.shadow_dict = {**frame.f_locals, **frame.f_globals, **frame.f_builtins}
@@ -54,9 +57,24 @@ class MaskDict(dict):
             self[base.__name__] = base
 
     def __setitem__(self, key, value):
+        if isinstance(value, Mask):
+            value = value._val
+        if self.__should_wrap__(key, value):
+            value = ValueLinker(value)
         if isinstance(value, Linker):
             value.__close__(key)
         super().__setitem__(key, value)
+
+    def __should_wrap__(self, key, value):
+        if key.startswith('__') or key in MaskDict.whitelist:
+            return False
+        if isinstance(value, Linker):
+            return False
+        if isinstance(value, MaskDict.preserved_value_types):
+            return False
+        if isinstance(value, FunctionType) and value.__name__ != '<lambda>':
+            return False
+        return True
     
     def __getitem__(self, key):
         if super().__contains__(key):
@@ -67,7 +85,7 @@ class MaskDict(dict):
                 return val
             elif key.startswith('__') or key in MaskDict.whitelist:
                 val = self.shadow_dict[key]
-                self[key] = val
+                super().__setitem__(key, val)
                 return val
             elif key in self.shadow_dict:
                 val = self.shadow_dict[key]
@@ -75,7 +93,7 @@ class MaskDict(dict):
                     val = TypeMask(key, val)
                 else:
                     val = ObjectMask(key, val)
-                self[key] = val
+                super().__setitem__(key, val)
                 return val
             else:
                 raise AttributeError(f'Attribute {key} not found')

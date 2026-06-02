@@ -29,6 +29,13 @@ inspectable: public class attributes become overrideable parameters, and
 expressions that reference those parameters are evaluated when an instance is
 built.
 
+## Project Timeline
+
+`paramclass` was developed during 2023-2024 and has been used in production
+workflows since 2023. Public packaging was added in 2025, and public
+documentation was added in 2026 to make the project easier to evaluate, install,
+and reuse outside its original environment.
+
 ## Install
 
 ```bash
